@@ -1,9 +1,11 @@
 module Day01 exposing (..)
 
 import Browser
-import Html exposing (Html, div, label, textarea, text)
-import Html.Attributes exposing (id, for, placeholder, rows, cols)
-import Html.Events exposing (onInput)
+import Element exposing (Element, column, el, row, text)
+import Element.Font as Font
+import Element.Input as Input
+import Element.Region as Region
+import Html exposing (Html)
 import List exposing (foldl, map)
 
 main =
@@ -44,6 +46,16 @@ calculateFuel inputMasses =
     |> foldl (+) 0
   )
 
+printFuelRequired : FuelRequired -> String
+printFuelRequired fuelRequired =
+  case fuelRequired of
+    InvalidInput -> "Input some masses"
+    Calculated fuel -> String.fromInt fuel
+
+getSolution : String -> String
+getSolution puzzleInput =
+  printFuelRequired <| calculateFuel puzzleInput
+
 -- Update
 
 type Msg =
@@ -57,16 +69,30 @@ update msg model =
 
 -- View
 
-printFuelRequired : FuelRequired -> String
-printFuelRequired fuelRequired =
-  case fuelRequired of
-    InvalidInput -> "Input some masses"
-    Calculated fuel -> String.fromInt fuel
-
 view : Model -> Html Msg
 view model =
-  div []
-    [ label [ for "inputArea" ] [ text "List of module masses" ]
-    , textarea [ id "inputArea", onInput InputTextUpdated, rows 25, cols 80 ] [ text model.inputText ]
-    , div [] [ text (printFuelRequired (calculateFuel model.inputText)) ]
+  Element.layout [Region.mainContent, Element.width (Element.px 920), Element.padding 30]
+    (el [Element.centerX] (puzzleLayout model))
+
+puzzleHeader headerText =
+  el [Region.heading 1, Font.size 32, Font.semiBold] (text headerText)
+puzzleLabel labelText =
+  el [Font.size 16, Font.light] (text labelText)
+
+puzzleLayout model =
+  column [Element.width Element.fill, Element.padding 30, Element.spacing 20]
+    [ puzzleHeader "Day 01 - Calculate fuel for launch"
+    , row [Element.width Element.fill, Element.spacing 20]
+      [ Input.multiline [Element.width (Element.fillPortion 2)]
+        { onChange = InputTextUpdated
+        , spellcheck = False
+        , label = Input.labelAbove [] (puzzleLabel "Puzzle input:")
+        , placeholder = Just (Input.placeholder [] (text "Paste the puzzle input"))
+        , text = model.inputText
+        }
+      , column [Element.width (Element.fillPortion 1), Element.spacing 20, Element.alignTop] 
+        [ (puzzleLabel "Solution:")
+        , text <| getSolution model.inputText
+        ]
+      ]
     ]
