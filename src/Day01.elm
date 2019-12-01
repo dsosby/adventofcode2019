@@ -25,19 +25,22 @@ init =
 -- Solver
 safelyInt : String -> Int
 safelyInt inputStr = String.toInt inputStr |> Maybe.withDefault 0
-divideIntBy x a = a // x
+
+calculateFuelForMass: Int -> Int
+calculateFuelForMass mass =
+  -- Recur until fuel required is negative
+  let fuelRequired = (mass // 3) - 2
+  in
+    if fuelRequired <= 0
+    then 0
+    else fuelRequired + (calculateFuelForMass fuelRequired)
 
 calculateFuel : String -> FuelRequired
 calculateFuel inputMasses =
-  -- Split by line
-  -- Map to Int
-  -- Map to calculated fuel (divide by 3, round down, subtract 2)
-  -- Reduce by summing
   Calculated (
-    String.split "\n" inputMasses
-    |> map safelyInt -- I should filter out unsafes instead of which yields -2
-    |> map (divideIntBy 3)
-    |> map ((+) -2)
+    String.split "\n" (String.trim inputMasses)
+    |> map safelyInt -- I should filter out unsafes instead default 0 which yields -2
+    |> map calculateFuelForMass
     |> foldl (+) 0
   )
 
