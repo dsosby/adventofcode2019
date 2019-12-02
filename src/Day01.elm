@@ -6,7 +6,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
-import List exposing (foldl, map)
+import List exposing (filterMap, isEmpty, map, sum)
 
 main =
   Browser.sandbox { init = init, update = update, view = view }
@@ -18,15 +18,17 @@ type FuelRequired =
  | Calculated Int
 
 type alias Model =
-  { inputText: String, outputValue: FuelRequired }
+  { inputText: String
+  , outputValue: FuelRequired
+  }
 
 init : Model
 init =
-  { inputText = "", outputValue = InvalidInput }
+  { inputText = ""
+  , outputValue = InvalidInput
+  }
 
 -- Solver
-safelyInt : String -> Int
-safelyInt inputStr = String.toInt inputStr |> Maybe.withDefault 0
 
 calculateFuelForMass: Int -> Int
 calculateFuelForMass mass =
@@ -39,12 +41,15 @@ calculateFuelForMass mass =
 
 calculateFuel : String -> FuelRequired
 calculateFuel inputMasses =
-  Calculated (
-    String.split "\n" (String.trim inputMasses)
-    |> map safelyInt -- I should filter out unsafes instead default 0 which yields -2
-    |> map calculateFuelForMass
-    |> foldl (+) 0
-  )
+  let
+    fuelCalculations =
+      String.split "\n" (String.trim inputMasses)
+      |> filterMap String.toInt
+      |> map calculateFuelForMass
+  in
+    if (isEmpty fuelCalculations)
+    then InvalidInput
+    else Calculated <| sum fuelCalculations
 
 printFuelRequired : FuelRequired -> String
 printFuelRequired fuelRequired =
