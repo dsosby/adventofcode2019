@@ -1,7 +1,7 @@
 module Day01 exposing (..)
 
 import Browser
-import Element exposing (Element, column, el, row, text, height, width, fill, px, centerX)
+import Element exposing (Element, column, el, row, text, height, width, fill, px, centerX, scrollbarX)
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -93,7 +93,7 @@ puzzle model =
   column [Element.width Element.fill, Element.padding 30, Element.spacing 20]
     [ puzzleHeader "Day 01 - Calculate fuel for launch"
     , row [Element.width Element.fill, Element.spacing 20]
-      [ Input.multiline [Element.width (Element.fillPortion 2), height (px 300)]
+      [ Input.multiline [Element.width (Element.fillPortion 2), height (px 300), scrollbarX]
         { onChange = InputTextUpdated
         , spellcheck = False
         , label = Input.labelAbove [] (puzzleLabel "Puzzle input:")
