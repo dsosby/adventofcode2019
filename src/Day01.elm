@@ -1,7 +1,7 @@
 module Day01 exposing (..)
 
 import Browser
-import Element exposing (Element, column, el, row, text)
+import Element exposing (Element, column, el, row, text, height, width, fill, px, centerX)
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -49,7 +49,7 @@ calculateFuel inputMasses =
 printFuelRequired : FuelRequired -> String
 printFuelRequired fuelRequired =
   case fuelRequired of
-    InvalidInput -> "Input some masses"
+    InvalidInput -> "?"
     Calculated fuel -> String.fromInt fuel
 
 getSolution : String -> String
@@ -71,19 +71,24 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  Element.layout [Region.mainContent, Element.width (Element.px 920), Element.padding 30]
-    (el [Element.centerX] (puzzleLayout model))
+  Element.layout [Region.mainContent, Element.padding 30]
+    <| centeredColumn
+    <| puzzle model
+
+centeredColumn x =
+    row [ width fill]
+        <| [ el [ centerX, width (px 960) ] x ]
 
 puzzleHeader headerText =
   el [Region.heading 1, Font.size 32, Font.semiBold] (text headerText)
 puzzleLabel labelText =
   el [Font.size 16, Font.light] (text labelText)
 
-puzzleLayout model =
+puzzle model =
   column [Element.width Element.fill, Element.padding 30, Element.spacing 20]
     [ puzzleHeader "Day 01 - Calculate fuel for launch"
     , row [Element.width Element.fill, Element.spacing 20]
-      [ Input.multiline [Element.width (Element.fillPortion 2)]
+      [ Input.multiline [Element.width (Element.fillPortion 2), height (px 300)]
         { onChange = InputTextUpdated
         , spellcheck = False
         , label = Input.labelAbove [] (puzzleLabel "Puzzle input:")
