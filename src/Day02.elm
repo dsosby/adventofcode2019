@@ -1,6 +1,6 @@
 module Day02 exposing (..)
 
-import Array exposing (Array, fromList, get, set)
+import Array exposing (Array, fromList, get, set, slice, toList)
 import Browser
 import Element exposing (Element, column, el, row, text, height, width, fill, px, centerX, scrollbarX)
 import Element.Font as Font
@@ -8,7 +8,7 @@ import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
 import List exposing (filterMap, isEmpty, map, sum)
-import String exposing (join, split, toInt)
+import String exposing (fromInt, join, split, toInt)
 
 main =
   Browser.sandbox { init = init, update = update, view = view }
@@ -32,11 +32,12 @@ init =
 
 -- Solver
 
+type alias RunningGravityComputer = { ptr : Int, state : Array Int }
 type GravityComputer
   = Faulted
-  | Running { ptr : Int, state : Array Int }
+  | Running RunningGravityComputer
 
-initialize : String -> GravityComputer
+initialize : String -> RunningGravityComputer
 initialize input =
   let
     parsed =
@@ -44,57 +45,63 @@ initialize input =
       |> filterMap toInt
       |> fromList
   in
-    Running
-      { ptr = 0
-      , state = parsed }
+    { ptr = 0
+    , state = parsed }
 
-restore : GravityComputer -> GravityComputer
+{- TODO Investigate railway oriented error handling like F#
+   Faulted state is verbose -}
+
+restore : RunningGravityComputer -> GravityComputer
 restore computer =
-  set 1 12 computer.state
-  |> set 2 2 computer.state
+  Running
+    { computer | state =
+      computer.state
+      |> set 1 12
+      |> set 2 2
+    }
 
-addOperation : Int -> GravityComputer -> GravityComputer
+addOperation : Int -> RunningGravityComputer -> GravityComputer
 addOperation ptr computer =
   let
-    a = get (ptr + 1) computer.state
-    b = get (ptr + 2) computer.state
-    target = get (ptr + 3) computer.state
+    inputs = 
+      ( get (ptr + 1) computer.state
+      , get (ptr + 2) computer.state
+      , get (ptr + 3) computer.state
+      )
   in
-    {- TODO Can I do tuple matching? -}
-    case a of
-      Nothing -> Faulted
-      Just a ->
-        case b of
-          Nothing -> Faulted
-          Just b -> 
-            case target of
-              Nothing -> Faulted
-              Just target ->
-                {- Valid inputs -}
-                Running { state | state = set target (a + b) computer.state, ptr = (ptr + 4) }
+    case inputs of
+      (Just a, Just b, Just target) ->
+        Running { computer | state = set target (a + b) computer.state, ptr = (ptr + 4) }
+      _ -> Faulted
 
 
 run : GravityComputer -> GravityComputer
-run computer =
-  let
-    curOp =
-      get computer.ptr computer.state
-  in
-    case curOp of
-      Nothing -> Faulted {- Corrupt program detected. Love the Elm makes you deal with these -}
-      Just opcode ->
-        case opcode of
-          1 -> run (addOperation computer) -- Add
-          2 -> run (addOperation computer) -- Multiply
-          99 -> computer -- Quit
+run c =
+  case c of
+    Faulted -> Faulted
+    Running computer ->
+      let
+        curOp =
+          get computer.ptr computer.state
+      in
+        case curOp of
+          Nothing -> Faulted {- Corrupt program detected. Love the Elm makes you deal with these -}
+          Just opcode ->
+            case opcode of
+              1 -> run (addOperation computer.ptr computer) -- Add
+              2 -> run (addOperation computer.ptr computer) -- Multiply
+              99 -> Running computer -- Quit
+              _ -> Faulted -- Unknown opcode
 
 print : GravityComputer -> String
 print computer =
-  join ", " computer.state
+  case computer of
+    Faulted -> "Faulted"
+    Running c -> join ", " (toList c.state |> map fromInt)
 
 solve : String -> String
 solve puzzleInput =
-  init puzzleInput
+  initialize puzzleInput
   |> restore
   |> run
   |> print
