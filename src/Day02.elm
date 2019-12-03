@@ -110,12 +110,16 @@ print : GravityComputer -> String
 print computer =
   case computer of
     Faulted -> "Faulted"
-    Running c -> join ", " (toList c.state |> map fromInt)
+    Running c ->
+      let solution = get 0 c.state
+      in case solution of
+        Nothing -> "Corrupt"
+        Just s -> s |> fromInt
 
 solve : String -> String
 solve puzzleInput =
   initialize puzzleInput
-  |> restore
+--  |> restore
   |> Running
   |> run
   |> print
