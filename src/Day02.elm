@@ -156,7 +156,7 @@ puzzle model =
   column [Element.width Element.fill, Element.padding 30, Element.spacing 20]
     [ puzzleHeader "Day 02 - Gravity assist computer"
     , row [Element.width Element.fill, Element.spacing 20]
-      [ Input.multiline [Element.width (Element.fillPortion 2), height (px 300), scrollbarX]
+      [ Input.multiline [Element.width (Element.px 600), height (px 300), scrollbarX]
         { onChange = InputTextUpdated
         , spellcheck = False
         , label = Input.labelAbove [] (puzzleLabel "Puzzle input:")
