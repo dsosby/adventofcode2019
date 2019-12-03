@@ -50,14 +50,13 @@ initialize input =
     { ptr = 0
     , state = parsed }
 
-restore : RunningGravityComputer -> GravityComputer
+restore : RunningGravityComputer -> RunningGravityComputer
 restore computer =
-  Running
-    { computer | state =
-      computer.state
-      |> set 1 12
-      |> set 2 2
-    }
+  { computer | state =
+    computer.state
+    |> set 1 12
+    |> set 2 2
+  }
 
 {- TODO See if I can refactor the input extraction and/or op implementations to be generic and re-usable -}
 
@@ -117,6 +116,7 @@ solve : String -> String
 solve puzzleInput =
   initialize puzzleInput
   |> restore
+  |> Running
   |> run
   |> print
 
