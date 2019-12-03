@@ -8,7 +8,7 @@ import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
 import List exposing (filterMap, isEmpty, map, sum)
-import String exposing (fromInt, join, split, toInt)
+import String exposing (fromInt, join, split, toInt, trim)
 
 main =
   Browser.sandbox { init = init, update = update, view = view }
@@ -41,15 +41,14 @@ initialize : String -> RunningGravityComputer
 initialize input =
   let
     parsed =
-      split "," input
+      input
+      |> trim
+      |> split ","
       |> filterMap toInt
       |> fromList
   in
     { ptr = 0
     , state = parsed }
-
-{- TODO Investigate railway oriented error handling like F#
-   Faulted state is verbose -}
 
 restore : RunningGravityComputer -> GravityComputer
 restore computer =
@@ -60,20 +59,35 @@ restore computer =
       |> set 2 2
     }
 
-addOperation : Int -> RunningGravityComputer -> GravityComputer
-addOperation ptr computer =
-  let
-    inputs = 
-      ( get (ptr + 1) computer.state
-      , get (ptr + 2) computer.state
-      , get (ptr + 3) computer.state
-      )
-  in
-    case inputs of
-      (Just a, Just b, Just target) ->
-        Running { computer | state = set target (a + b) computer.state, ptr = (ptr + 4) }
-      _ -> Faulted
+{- TODO See if I can refactor the input extraction and/or op implementations to be generic and re-usable -}
 
+binaryOperation : (Int -> Int -> Int) -> (Int -> RunningGravityComputer -> GravityComputer)
+binaryOperation op =
+  \ptr computer ->
+    let
+      inputs = 
+        ( get (ptr + 1) computer.state
+        , get (ptr + 2) computer.state
+        , get (ptr + 3) computer.state
+        )
+    in
+      case inputs of
+        (Just idxLhv, Just idxRhv, Just idxTarget) ->
+          let
+            maybeLhv = get idxLhv computer.state
+            maybeRhv = get idxRhv computer.state
+          in
+            case (maybeLhv, maybeRhv) of
+              (Just lhv, Just rhv) ->
+                  Running { computer | state = set idxTarget (op lhv rhv) computer.state, ptr = (ptr + 4) }
+              _ -> Faulted {- The indexes were invalid -}
+        _ -> Faulted {- The state did not provide enough inputs for this opcode -}
+
+addOperation = binaryOperation (+)
+multiplyOperation = binaryOperation (*)
+
+{- TODO Investigate railway oriented error handling like F#
+   Faulted state is verbose -}
 
 run : GravityComputer -> GravityComputer
 run c =
@@ -85,11 +99,11 @@ run c =
           get computer.ptr computer.state
       in
         case curOp of
-          Nothing -> Faulted {- Corrupt program detected. Love the Elm makes you deal with these -}
+          Nothing -> Faulted {- Corrupt program detected. I love that Elm makes you deal with these -}
           Just opcode ->
             case opcode of
-              1 -> run (addOperation computer.ptr computer) -- Add
-              2 -> run (addOperation computer.ptr computer) -- Multiply
+              1 -> run (addOperation computer.ptr computer)
+              2 -> run (multiplyOperation computer.ptr computer)
               99 -> Running computer -- Quit
               _ -> Faulted -- Unknown opcode
 
