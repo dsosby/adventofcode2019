@@ -2,13 +2,15 @@ module Day02 exposing (..)
 
 import Array exposing (Array, fromList, get, set, slice, toList)
 import Browser
+import Debug exposing (log)
 import Element exposing (Element, column, el, row, text, height, width, fill, px, centerX, scrollbarX)
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
-import List exposing (filterMap, isEmpty, map, sum)
+import List exposing (filter, filterMap, head, isEmpty, map, range, sum)
 import String exposing (fromInt, join, split, toInt, trim)
+import Tuple exposing (first, pair, second)
 
 main =
   Browser.sandbox { init = init, update = update, view = view }
@@ -32,13 +34,27 @@ init =
 
 -- Solver
 
+{- Stolen from MartinKavik/elm-combinatorics -}
+getVariationsWithReps : Int -> List a -> List (List a)
+getVariationsWithReps k set =
+    let
+        doGetVariationsWithReps mk mset depth resultItem =
+            if depth < mk then
+                mset
+                    |> List.concatMap
+                        (\setItem -> doGetVariationsWithReps mk mset (depth + 1) (setItem :: resultItem))
+            else
+                [ resultItem |> List.reverse ]
+    in
+    doGetVariationsWithReps k set 0 []
+
 type alias RunningGravityComputer = { ptr : Int, state : Array Int }
 type GravityComputer
   = Faulted
   | Running RunningGravityComputer
 
-initialize : String -> RunningGravityComputer
-initialize input =
+initialize : String -> Int -> Int -> GravityComputer
+initialize input noun verb =
   let
     parsed =
       input
@@ -47,15 +63,14 @@ initialize input =
       |> filterMap toInt
       |> fromList
   in
-    { ptr = 0
-    , state = parsed }
+    Running (restore { ptr = 0, state = parsed } noun verb)
 
-restore : RunningGravityComputer -> RunningGravityComputer
-restore computer =
+restore : RunningGravityComputer -> Int -> Int -> RunningGravityComputer
+restore computer noun verb =
   { computer | state =
     computer.state
-    |> set 1 12
-    |> set 2 2
+    |> set 1 noun
+    |> set 2 verb
   }
 
 {- TODO See if I can refactor the input extraction and/or op implementations to be generic and re-usable -}
@@ -106,23 +121,42 @@ run c =
               99 -> Running computer -- Quit
               _ -> Faulted -- Unknown opcode
 
+valueAt : Int -> GravityComputer -> Maybe Int
+valueAt address computer =
+  case computer of
+    Faulted -> Nothing
+    Running c -> get address c.state
+
 print : GravityComputer -> String
 print computer =
-  case computer of
-    Faulted -> "Faulted"
-    Running c ->
-      let solution = get 0 c.state
-      in case solution of
-        Nothing -> "Corrupt"
-        Just s -> s |> fromInt
+  let
+    addressZero = valueAt 0 computer
+  in
+  case addressZero of
+    Nothing -> "Faulted"
+    Just value -> fromInt value
 
+toTuple : List a -> Maybe (a, a)
+toTuple vals =
+  case vals of
+    [lhv, rhv] -> Just (lhv, rhv)
+    _ -> Nothing
+
+{- TODO [Perf] Find/First with Generator would be better, and re-parsing each time could be cached -}
 solve : String -> String
 solve puzzleInput =
-  initialize puzzleInput
---  |> restore
-  |> Running
-  |> run
-  |> print
+  let
+    validInputs = getVariationsWithReps 2 (range 0 99) |> filterMap toTuple
+    solution =
+      validInputs
+      |> map (\nv -> { computer = initialize puzzleInput (first nv) (second nv), noun = first nv, verb = second nv })
+      |> map (\r -> { r | computer = run r.computer })
+      |> filter (\r -> (log "S" (valueAt 0 r.computer)) == Just 19690720)
+      |> head
+  in
+  case solution of
+    Nothing -> "No solution found"
+    Just r -> "Noun=" ++ (fromInt r.noun) ++ " Verb=" ++ (fromInt r.verb)
 
 -- Update
 
